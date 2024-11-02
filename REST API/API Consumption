@@ -1,0 +1,158 @@
+*&---------------------------------------------------------------------*
+*& Report ZAPI_CONSUMPTION
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT zapi_consumption.
+
+TYPES: BEGIN OF ty_final,
+         id         TYPE i,
+         email      TYPE string,
+         first_name TYPE string,
+         last_name  TYPE string,
+         avatar     TYPE string,
+       END OF ty_final.
+
+data:    BEGIN OF ls_auth_req,
+         gstin              TYPE string,
+         e_invoice_user_name TYPE string,
+         e_invoice_password TYPE string,
+       END OF ls_auth_req.
+
+DATA: lt_final TYPE TABLE OF ty_final.
+
+data: lv_json        TYPE string,
+      lv_json_x      TYPE xstring,
+      ls_message     TYPE bapiret2,
+      et_message TYPE BAPIRET2_T.
+
+
+DATA: lv_url TYPE string.
+lv_url = 'https://reqres.in/api/users/2'.
+
+
+cl_http_client=>create_by_url(
+  EXPORTING
+    url                = lv_url
+  IMPORTING
+    client             = DATA(lo_http)
+  EXCEPTIONS
+    argument_not_found = 1
+    plugin_not_active  = 2
+    internal_error     = 3
+    OTHERS             = 4
+).
+
+
+IF sy-subrc = 0.
+
+  lo_http->request->set_method( 'GET' ).
+  lo_http->request->set_content_type( if_rest_media_type=>gc_appl_json ).
+
+  ls_auth_req-gstin               = ''.
+  ls_auth_req-e_invoice_user_name = ''.
+  ls_auth_req-e_invoice_password  = ''.
+
+  lv_json = /ui2/cl_json=>serialize( data = ls_auth_req compress = abap_true pretty_name = /ui2/cl_json=>pretty_mode-camel_case ).
+
+
+  CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
+    EXPORTING
+      text   = lv_json
+    IMPORTING
+      buffer = lv_json_x.
+
+  lo_http->request->set_data( lv_json_x ).
+
+
+  lo_http->send(
+    EXPORTING
+      timeout                    = 15    " Timeout of Answer Waiting Time
+    EXCEPTIONS
+      http_communication_failure = 1
+      http_invalid_state         = 2
+      http_processing_failed     = 3
+      http_invalid_timeout       = 4
+      OTHERS                     = 5
+  ).
+
+*     IF sy-subrc = 1.
+*            MESSAGE e008(zeinv) INTO ls_message-message .
+*            ls_message-type     = sy-msgty.
+*            ls_message-id       = sy-msgid.
+*            ls_message-number   = sy-msgno.
+*            APPEND ls_message TO et_message.
+*            RETURN.
+*          ELSEIF sy-subrc = 2.
+*            MESSAGE e009(zeinv) INTO ls_message-message .
+*            ls_message-type     = sy-msgty.
+*            ls_message-id       = sy-msgid.
+*            ls_message-number   = sy-msgno.
+*            APPEND ls_message TO et_message.
+*            RETURN.
+*          ENDIF.
+
+
+  lo_http->receive(
+    EXCEPTIONS
+      http_communication_failure = 1
+      http_invalid_state         = 2
+      http_processing_failed     = 3
+      OTHERS                     = 4
+  ).
+
+ IF sy-subrc = 1.
+            MESSAGE e008(zeinv) INTO ls_message-message .
+            ls_message-type     = sy-msgty.
+            ls_message-id       = sy-msgid.
+            ls_message-number   = sy-msgno.
+            APPEND ls_message TO et_message.
+            RETURN.
+          ELSEIF sy-subrc = 2.
+            MESSAGE e009(zeinv) INTO ls_message-message .
+            ls_message-type     = sy-msgty.
+            ls_message-id       = sy-msgid.
+            ls_message-number   = sy-msgno.
+            APPEND ls_message TO et_message.
+            RETURN.
+          ELSEIF sy-subrc = 3.
+            MESSAGE e010(zeinv) INTO ls_message-message .
+            ls_message-type     = sy-msgty.
+            ls_message-id       = sy-msgid.
+            ls_message-number   = sy-msgno.
+            APPEND ls_message TO et_message.
+            RETURN.
+          ENDIF.
+
+  DATA(result) = lo_http->response->get_cdata( ).
+
+
+  IF result IS NOT INITIAL.
+
+  ENDIF.
+
+* /ui2/cl_json=>deserialize( EXPORTING json = result pretty_name = /ui2/cl_json=>pretty_mode-camel_case CHANGING data = lt_final ).
+
+*  cl_abap_browser=>show_html(
+*    EXPORTING
+**      html         =     " HTML Table, Line Width 255 Characters
+*      title        =  'API Consumption'   " Window Title
+**      size         = CL_ABAP_BROWSER=>MEDIUM    " Size (S,M.L,XL)
+**      modal        = ABAP_TRUE    " Dialog box is modal (else modeless)
+*      html_string  = result    " HTML String
+**      printing     = ABAP_FALSE    " Key for printing
+**      buttons      = NAVIGATE_OFF    " Navigation Keys navigate_...
+**      format       = CL_ABAP_BROWSER=>LANDSCAPE    " Landscape/portrait format
+**      position     = CL_ABAP_BROWSER=>TOPLEFT    " Position
+**      data_table   =     " External data
+**      anchor       =     " Goto Point
+**      context_menu = ABAP_FALSE    " Display context menu in browser
+**      html_xstring =     " HTML Binary String
+**      check_html   = ABAP_TRUE    " Test of HTML File
+**      container    =     " Container for display
+**      dialog       = ABAP_TRUE    " Display in dialog box
+**    IMPORTING
+**      html_errors  =     " Error List from Test
+*  ).
+
+ENDIF.
