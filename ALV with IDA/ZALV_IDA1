@@ -1,0 +1,22 @@
+*&---------------------------------------------------------------------*
+*& Report ZALV_IDA1
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZALV_IDA1.
+
+data(o_ida) = cl_salv_gui_table_ida=>create_for_cds_view(
+                  iv_cds_view_name               = 'ZVBAP_VIEW'
+              ).
+
+"Authorization check
+o_ida->add_authorization_for_object(
+  EXPORTING
+    iv_authorization_object        = 'ZVKORG'
+    it_activities                  = VALUE if_salv_gui_types_ida=>yt_activities( ( auth_field = 'ACTVT' value = '03' ) )
+    it_field_mapping               = VALUE if_salv_gui_types_ida=>yt_field_mapping( ( auth_field = 'CHARG' view_field = 'CHARG' ) ) ) .
+
+
+
+"display
+o_ida->fullscreen( )->display( ).
