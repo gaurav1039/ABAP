@@ -1,0 +1,18 @@
+*&---------------------------------------------------------------------*
+*& Report ZR_HANA_IDA_01
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZR_HANA_IDA_01.
+
+CHECK cl_salv_gui_table_ida=>db_capabilities( )->is_table_supported( iv_ddic_table_name = 'VBAK').
+
+DATA(o_ida) = cl_salv_gui_table_ida=>create( iv_table_name = 'VBAK' ).
+
+IF cl_salv_gui_table_ida=>db_capabilities( )->is_max_rows_recommended( ).
+
+o_ida->set_maximum_number_of_rows(  iv_number_of_rows = 60 ).
+
+ENDIF.
+
+o_ida->fullscreen( )->display( ).
